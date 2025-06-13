@@ -1,71 +1,72 @@
 import java.util.HashMap;
 
-public class LRUCache {
-    private Node head;
-    private Node tail;
-    private HashMap<Integer, Node> map;
-    private static int size = 3;
+public class LRUCache<K, V> {
+    private Node<K, V> head;
+    private Node<K, V> tail;
+    private HashMap<K, Node<K, V>> map;
+    private int capacity;
 
-    public LRUCache() {
-        this.head = new Node();
-        this.tail = new Node();
+    public LRUCache(int capacity) {
+        this.capacity = capacity;
         this.map = new HashMap<>();
-        initializeDLL(head, tail);
+        this.head = new Node<>();
+        this.tail = new Node<>();
+        initializeDLL();
     }
 
-    public void put(int key, int data) {
-        if (map.containsKey(key)) {
-            Node node = map.get(key);
-            deleteLRUData(node);
-        }
-        if (map.size() == size) {
-            deleteLRUData(tail.prev);
-        }
-        createNewNode(key, data);
-    }
-
-    public int get(int key) {
-        if (!map.containsKey(key)) {
-            return -1;
-        }
-        Node node = map.get(key);
-        int data = node.data;
-        deleteLRUData(node);
-        createNewNode(key, data);
-        return data;
-    }
-
-    public void setSize(int length) {
-        size = length;
-    }
-
-    private void initializeDLL(Node head, Node tail) {
+    private void initializeDLL() {
         head.next = tail;
         tail.prev = head;
     }
 
-    private void createNewNode(int key, int data) {
-        Node newData = new Node(key, data);
-        Node nextAfterHead = head.next;
-        head.next = newData;
-        newData.prev = head;
-        nextAfterHead.prev = newData;
-        newData.next = nextAfterHead;
-        map.put(key, newData);
+    public void put(K key, V data) {
+        if (map.containsKey(key)) {
+            Node<K, V> node = map.get(key);
+            node.data = data;
+            moveToFront(node);
+        } else {
+            if (map.size() == capacity) {
+                Node<K, V> lru = tail.prev;
+                removeNode(lru);
+                map.remove(lru.key);
+            }
+            Node<K, V> newNode = new Node<>(key, data);
+            map.put(key, newNode);
+            insertAtFront(newNode);
+        }
     }
 
-    private void deleteLRUData(Node node) {
-        Node nodeBeforeLRU = node.prev;
-        nodeBeforeLRU.next = node.next;
-        node.next.prev = nodeBeforeLRU;
-        map.remove(node.key);
+    public V get(K key) {
+        if (!map.containsKey(key))
+            return null;
+        Node<K, V> node = map.get(key);
+        moveToFront(node);
+        return node.data;
+    }
+
+    private void moveToFront(Node<K, V> node) {
+        removeNode(node);
+        insertAtFront(node);
+    }
+
+    private void insertAtFront(Node<K, V> node) {
+        Node<K, V> next = head.next;
+        head.next = node;
+        node.prev = head;
+        node.next = next;
+        next.prev = node;
+    }
+
+    private void removeNode(Node<K, V> node) {
+        node.prev.next = node.next;
+        node.next.prev = node.prev;
     }
 
     public void printDLL() {
-        Node start = head.next;
-        while (start.next != null) {
-            System.out.println(start.key + ":" + start.data);
-            start = start.next;
+        Node<K, V> current = head.next;
+        while (current != tail) {
+            System.out.println(current.key + ":" + current.data);
+            current = current.next;
         }
     }
 }
